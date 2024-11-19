@@ -14,11 +14,12 @@ def solve_bse(S, E, r, sigma, tau):
         P = C + E * np.exp(-r * tau) - S
         Pdelta = Cdelta - 1
     else:
-        C = np.max(S - E, 0)
+        C = max(S - E, 0)
         Cdelta = 0.5 * (np.sign(S - E) + 1)
-        P = np.max(E-S, 0)
+        P = max(E-S, 0)
         Pdelta = Cdelta - 1
     return C, Cdelta, P, Pdelta
+
 
 if __name__ == "__main__":
     S = 2
