@@ -2,7 +2,7 @@ import numpy as np
 
 
 def compute_call_option_payout(asset_price_range, exercise_price):
-    return np.array([max(s, exercise_price, 0) for s in asset_price_range])
+    return np.array([max(s - exercise_price, 0) for s in asset_price_range])
 
 
 def compute_put_option_payout(asset_price_range, exercise_price):
