@@ -18,10 +18,10 @@ def get_data(ticker):
 
     # Separate calls and puts
     calls = pd.DataFrame(options_chain.calls)
-    calls.to_csv(f"data/{ticker}_call_data.csv")
+    calls.to_csv(f"data/{ticker}_call_data.csv", index=False)
 
     puts = pd.DataFrame(options_chain.puts)
-    puts.to_csv(f"data/{ticker}_put_data.csv")
+    puts.to_csv(f"data/{ticker}_put_data.csv", index=False)
 
 
 if __name__ == "__main__":
