@@ -1,0 +1,324 @@
+/* Options Trading App Styles */
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: left;
+}
+
+.options-trader {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.options-trader h1 {
+  text-align: center;
+  color: #213547;
+  margin-bottom: 2rem;
+  font-size: 2.5rem;
+}
+
+/* Stock Selector Styles */
+.stock-selector {
+  margin-bottom: 3rem;
+  padding: 1.5rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.stock-selector h2 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #495057;
+}
+
+.stock-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.stock-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background-color: white;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.stock-option:hover {
+  background-color: #e9ecef;
+  border-color: #adb5bd;
+}
+
+.stock-option input[type="checkbox"] {
+  margin: 0;
+}
+
+.stock-symbol {
+  font-weight: bold;
+  color: #0d6efd;
+  min-width: 50px;
+}
+
+.stock-name {
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+/* Stock Table Styles */
+.stock-table-container {
+  margin-top: 2rem;
+}
+
+.stock-table-container h2 {
+  margin-bottom: 1rem;
+  color: #495057;
+}
+
+.stock-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.stock-table th {
+  background-color: #495057;
+  color: white;
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+}
+
+.stock-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.stock-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.stock-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.stock-table .symbol {
+  font-weight: bold;
+  color: #0d6efd;
+}
+
+.stock-table .name {
+  color: #495057;
+}
+
+.stock-table .price {
+  font-weight: 600;
+  color: #212529;
+}
+
+.stock-table .change.positive {
+  color: #198754;
+  font-weight: 600;
+}
+
+.stock-table .change.negative {
+  color: #dc3545;
+  font-weight: 600;
+}
+
+.stock-table .change-percent.positive {
+  color: #198754;
+  font-weight: 600;
+}
+
+.stock-table .change-percent.negative {
+  color: #dc3545;
+  font-weight: 600;
+}
+
+.stock-table .volume {
+  color: #6c757d;
+}
+
+.stock-table .market-cap {
+  color: #495057;
+  font-weight: 500;
+}
+
+.stock-table .actions {
+  text-align: center;
+}
+
+.calculate-btn {
+  background-color: #0d6efd;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background-color 0.2s ease;
+}
+
+.calculate-btn:hover {
+  background-color: #0b5ed7;
+}
+
+/* Options Calculator Styles */
+.options-calculator {
+  margin-top: 2rem;
+  padding: 2rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.options-calculator h3 {
+  color: #495057;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid #0d6efd;
+  padding-bottom: 0.5rem;
+}
+
+.loading {
+  color: #6c757d;
+  font-style: italic;
+}
+
+.error {
+  color: #dc3545;
+  background-color: #f8d7da;
+  padding: 0.75rem;
+  border-radius: 4px;
+  border: 1px solid #f5c6cb;
+}
+
+.calculator-inputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.input-group label {
+  font-weight: 600;
+  color: #495057;
+  font-size: 0.9rem;
+}
+
+.input-group input {
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.input-group input:focus {
+  outline: none;
+  border-color: #86b7fe;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.stock-price {
+  font-weight: bold;
+  color: #0d6efd;
+  font-size: 1.1rem;
+  padding: 0.5rem;
+  background-color: white;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+}
+
+.calculation-results {
+  background-color: white;
+  padding: 1.5rem;
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+}
+
+.calculation-results h4 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #495057;
+}
+
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+  margin-bottom: 1rem;
+}
+
+.result-section h5 {
+  color: #6c757d;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.result-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f1f3f4;
+}
+
+.result-item:last-child {
+  border-bottom: none;
+}
+
+.result-item span:first-child {
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.result-item .value {
+  font-weight: 600;
+  color: #212529;
+  font-family: 'Courier New', monospace;
+}
+
+.calculation-info {
+  padding-top: 1rem;
+  border-top: 1px solid #e9ecef;
+  color: #6c757d;
+  text-align: center;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .stock-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .stock-table {
+    font-size: 0.875rem;
+  }
+  
+  .stock-table th,
+  .stock-table td {
+    padding: 0.5rem;
+  }
+  
+  .options-trader h1 {
+    font-size: 2rem;
+  }
+}
