@@ -1,0 +1,48 @@
+{
+    "configurations": [
+        {
+            "name": "Mac",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/opt/homebrew/Cellar/emscripten/*/libexec/system/include",
+                "/opt/homebrew/Cellar/emscripten/*/libexec/system/include/emscripten",
+                "/opt/homebrew/Cellar/emscripten/*/libexec/cache/sysroot/include"
+            ],
+            "defines": [
+                "__EMSCRIPTEN__=1",
+                "__EMSCRIPTEN_major__=3",
+                "__EMSCRIPTEN_minor__=1",
+                "__EMSCRIPTEN_tiny__=0",
+                "_GNU_SOURCE=1",
+                "__STDC__=1",
+                "__STDC_VERSION__=201710L",
+                "__STDC_HOSTED__=1",
+                "__wasm__=1",
+                "__wasm32__=1",
+                "EMSCRIPTEN_KEEPALIVE=",
+                "__has_builtin(x)=0"
+            ],
+            "compilerPath": "/opt/homebrew/bin/emcc",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "clang-x64",
+            "compilerArgs": [
+                "-target",
+                "wasm32-unknown-emscripten",
+                "-fno-builtin",
+                "-nostdinc++",
+                "-isystem/opt/homebrew/Cellar/emscripten/4.0.10/libexec/system/include",
+                "-isystem/opt/homebrew/Cellar/emscripten/4.0.10/libexec/cache/sysroot/include"
+            ],
+            "browse": {
+                "path": [
+                    "${workspaceFolder}",
+                    "/opt/homebrew/Cellar/emscripten/*/libexec/system/include"
+                ],
+                "limitSymbolsToIncludedHeaders": true,
+                "databaseFilename": ""
+            }
+        }
+    ],
+    "version": 4
+}
