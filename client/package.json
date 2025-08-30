@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "npm run build:wasm && npm run copy:wasm && tsc -b && vite build",
     "build:wasm": "cd wasm && ./build.sh",
+    "copy:wasm": "mkdir -p public/wasm && cp wasm/options_calculator.js public/wasm/ && cp wasm/options_calculator.wasm public/wasm/",
     "lint": "eslint .",
     "preview": "vite preview"
   },

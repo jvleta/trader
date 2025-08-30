@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Emscripten generated files
+wasm/options_calculator.js
+wasm/options_calculator.wasm
+wasm/options_calculator.d.ts
+public/wasm/options_calculator.js
+public/wasm/options_calculator.wasm

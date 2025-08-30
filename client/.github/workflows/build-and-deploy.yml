@@ -1,0 +1,68 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install Emscripten
+      run: |
+        # Download and install Emscripten
+        git clone https://github.com/emscripten-core/emsdk.git
+        cd emsdk
+        ./emsdk install latest
+        ./emsdk activate latest
+        source ./emsdk_env.sh
+        echo "EMSDK_ROOT=$(pwd)" >> $GITHUB_ENV
+        echo "$(pwd)/upstream/emscripten" >> $GITHUB_PATH
+
+    - name: Install npm dependencies
+      run: npm ci
+
+    - name: Build WASM module
+      run: |
+        source emsdk/emsdk_env.sh
+        cd wasm
+        chmod +x build.sh
+        ./build.sh
+
+    - name: Copy WASM files to public directory
+      run: |
+        mkdir -p public/wasm
+        cp wasm/options_calculator.js public/wasm/
+        cp wasm/options_calculator.wasm public/wasm/
+
+    - name: Build React app
+      run: npm run build
+
+    - name: Deploy to GitHub Pages
+      if: github.ref == 'refs/heads/main'
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./dist
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: wasm-build
+        path: |
+          wasm/options_calculator.js
+          wasm/options_calculator.wasm
+          wasm/options_calculator.d.ts
+        retention-days: 30
