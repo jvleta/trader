@@ -16,6 +16,21 @@ if ! command -v emcc &> /dev/null; then
     exit 1
 fi
 
+# Get the absolute path of the current directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Generate compile_commands.json for better IntelliSense
+echo "Generating compile_commands.json..."
+cat > "${SCRIPT_DIR}/compile_commands.json" << EOF
+[
+  {
+    "directory": "${SCRIPT_DIR}",
+    "command": "emcc -target wasm32-unknown-emscripten -fignore-exceptions -mllvm -combiner-global-alias-analysis=false -mllvm -enable-emscripten-sjlj -mllvm -disable-lsr --sysroot=/opt/homebrew/Cellar/emscripten/4.0.10/libexec/cache/sysroot -DEMSCRIPTEN -Xclang -iwithsysroot/include/fakesdl -Xclang -iwithsysroot/include/compat -isystem/opt/homebrew/Cellar/emscripten/4.0.10/libexec/cache/sysroot/include/c++/v1 -isystem/opt/homebrew/Cellar/emscripten/4.0.10/libexec/llvm/lib/clang/21/include -isystem/opt/homebrew/Cellar/emscripten/4.0.10/libexec/cache/sysroot/include --bind -std=c++17 options_calculator.cpp",
+    "file": "${SCRIPT_DIR}/options_calculator.cpp"
+  }
+]
+EOF
+
 # Compile with optimizations
 emcc options_calculator.cpp \
   -o options_calculator.js \
@@ -34,8 +49,10 @@ if [ $? -eq 0 ]; then
     echo "Generated files:"
     echo "  - options_calculator.js"
     echo "  - options_calculator.wasm"
+    echo "  - compile_commands.json"
     echo ""
     echo "Files ready for use in React app."
+    echo "IntelliSense compilation database updated."
 else
     echo "❌ Build failed!"
     exit 1
