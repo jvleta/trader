@@ -43,6 +43,34 @@ emcc options_calculator.cpp \
    - `options_calculator.js` - JavaScript loader
    - `options_calculator.wasm` - WebAssembly binary
 
+## Code Formatting
+
+This project uses `clang-format` with Google C++ Style Guide for consistent code formatting.
+
+### Quick Format
+```bash
+# Format all C++ files in the wasm directory
+./format.sh
+```
+
+### VS Code Integration
+The `.clang-format` configuration is automatically detected by VS Code. When you save C++ files, they will be automatically formatted according to Google's style guide.
+
+### Pre-commit Hook (Optional)
+To automatically format C++ files before commits:
+```bash
+# Copy the pre-commit script to git hooks
+cp pre-commit-format.sh ../.git/hooks/pre-commit
+chmod +x ../.git/hooks/pre-commit
+```
+
+### Configuration Details
+- **Style**: Based on Google C++ Style Guide
+- **Line Length**: 100 characters
+- **Indentation**: 2 spaces
+- **Include Sorting**: Automatic
+- **Braces**: Attached style
+
 ## Usage in React
 
 ```typescript
