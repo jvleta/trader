@@ -2,6 +2,15 @@
 
 This directory contains C++ code that compiles to WebAssembly for high-performance options calculations.
 
+## File Structure
+
+- `options_calculator.h` - Header file with class declarations and function prototypes
+- `options_calculator.cpp` - Implementation of all options trading calculations
+- `bindings.cpp` - Emscripten bindings for JavaScript integration
+- `build.sh` - Build script to compile C++ to WebAssembly
+- `format.sh` - Code formatting script using clang-format
+- `pre-commit-format.sh` - Git pre-commit hook for automatic formatting
+
 ## Features
 
 - **Black-Scholes Option Pricing**: Call/Put prices and all Greeks (Delta, Gamma, Theta, Vega, Rho)
@@ -25,10 +34,15 @@ source ./emsdk_env.sh
 
 ### Building
 
-1. Compile the C++ code to WebAssembly:
+1. Use the build script to compile:
 ```bash
 # From the wasm directory
-emcc options_calculator.cpp \
+./build.sh
+```
+
+2. Or compile manually:
+```bash
+emcc options_calculator.cpp bindings.cpp \
   -o options_calculator.js \
   -s WASM=1 \
   -s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' \
@@ -39,9 +53,10 @@ emcc options_calculator.cpp \
   -O3
 ```
 
-2. The build will generate:
+3. The build will generate:
    - `options_calculator.js` - JavaScript loader
    - `options_calculator.wasm` - WebAssembly binary
+   - `compile_commands.json` - IntelliSense compilation database
 
 ## Code Formatting
 

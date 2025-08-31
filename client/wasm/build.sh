@@ -27,12 +27,17 @@ cat > "${SCRIPT_DIR}/compile_commands.json" << EOF
     "directory": "${SCRIPT_DIR}",
     "command": "emcc -target wasm32-unknown-emscripten -fignore-exceptions -mllvm -combiner-global-alias-analysis=false -mllvm -enable-emscripten-sjlj -mllvm -disable-lsr --sysroot=/opt/homebrew/Cellar/emscripten/4.0.10/libexec/cache/sysroot -DEMSCRIPTEN -Xclang -iwithsysroot/include/fakesdl -Xclang -iwithsysroot/include/compat -isystem/opt/homebrew/Cellar/emscripten/4.0.10/libexec/cache/sysroot/include/c++/v1 -isystem/opt/homebrew/Cellar/emscripten/4.0.10/libexec/llvm/lib/clang/21/include -isystem/opt/homebrew/Cellar/emscripten/4.0.10/libexec/cache/sysroot/include --bind -std=c++17 options_calculator.cpp",
     "file": "${SCRIPT_DIR}/options_calculator.cpp"
+  },
+  {
+    "directory": "${SCRIPT_DIR}",
+    "command": "emcc -target wasm32-unknown-emscripten -fignore-exceptions -mllvm -combiner-global-alias-analysis=false -mllvm -enable-emscripten-sjlj -mllvm -disable-lsr --sysroot=/opt/homebrew/Cellar/emscripten/4.0.10/libexec/cache/sysroot -DEMSCRIPTEN -Xclang -iwithsysroot/include/fakesdl -Xclang -iwithsysroot/include/compat -isystem/opt/homebrew/Cellar/emscripten/4.0.10/libexec/cache/sysroot/include/c++/v1 -isystem/opt/homebrew/Cellar/emscripten/4.0.10/libexec/llvm/lib/clang/21/include -isystem/opt/homebrew/Cellar/emscripten/4.0.10/libexec/cache/sysroot/include --bind -std=c++17 bindings.cpp",
+    "file": "${SCRIPT_DIR}/bindings.cpp"
   }
 ]
 EOF
 
 # Compile with optimizations
-emcc options_calculator.cpp \
+emcc options_calculator.cpp bindings.cpp \
   -o options_calculator.js \
   -s WASM=1 \
   -s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' \
