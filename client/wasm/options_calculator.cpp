@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <random>
 
 // Standard normal cumulative distribution function
 double norm_cdf(double x) { return 0.5 * std::erfc(-x * M_SQRT1_2); }
@@ -106,21 +107,18 @@ double MonteCarloEngine::simulate_asian_option(double S0, double K, double T, do
   double vol_sqrt_dt = sigma * std::sqrt(dt);
   double payoff_sum = 0.0;
 
-  // Simple linear congruential generator for random numbers
-  unsigned int seed = 12345;
+  // Use standard library random number generation
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::normal_distribution<double> normal_dist(0.0, 1.0);
 
   for (int path = 0; path < num_paths; ++path) {
     double S = S0;
     double sum_prices = 0.0;
 
     for (int step = 0; step < num_steps; ++step) {
-      // Generate pseudo-random normal variable (Box-Muller transform)
-      seed = seed * 1664525 + 1013904223;
-      double u1 = (seed & 0x7FFFFFFF) / double(0x7FFFFFFF);
-      seed = seed * 1664525 + 1013904223;
-      double u2 = (seed & 0x7FFFFFFF) / double(0x7FFFFFFF);
-
-      double z = std::sqrt(-2.0 * std::log(u1)) * std::cos(2.0 * M_PI * u2);
+      // Generate standard normal random variable
+      double z = normal_dist(gen);
 
       S *= std::exp(drift + vol_sqrt_dt * z);
       sum_prices += S;
