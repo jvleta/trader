@@ -5,11 +5,16 @@ from openbb import obb
 
 
 def _parse_dividend_amounts(dividends) -> list[float]:
-    if not dividends:
+    if dividends is None:
         return []
 
     if isinstance(dividends, dict):
-        dividends = dividends.get("data") or dividends.get("results") or dividends
+        if "data" in dividends:
+            dividends = dividends["data"]
+        elif "results" in dividends:
+            dividends = dividends["results"]
+        else:
+            dividends = dividends
 
     if hasattr(dividends, "to_dict"):
         try:
@@ -189,20 +194,21 @@ def fetch_option_chain(symbol: str, filter_expiries: list | None = None) -> pd.D
 
     return result.reset_index(drop=True)
 
-
-if __name__ == "__main__":
-    symbol = "AAPL"
+def example_usage(symbol: str = "AAPL", rows: int = 10) -> None:
     data = fetch_underlying_data(symbol)
-    spot_price = data["spot_price"]
-    dividend_yield = data["dividend_yield"]
-    risk_free_rate = data["risk_free_rate"]
-    print(f"The current spot price of {symbol} is: ${spot_price:.2f}")
-    print(f"The trailing dividend yield of {symbol} is: {dividend_yield*100:.2f}%")
-    print(f"The current risk-free rate is: {risk_free_rate*100:.2f}%")
+    print(
+        f"{symbol} spot: ${data['spot_price']:.2f} | "
+        f"dividend yield: {data['dividend_yield']*100:.2f}% | "
+        f"risk-free rate: {data['risk_free_rate']*100:.2f}%"
+    )
 
     option_chain = fetch_option_chain(symbol)
     if option_chain.empty:
         print(f"No option chain data available for {symbol}.")
-    else:
-        print(f"Option chain for {symbol}:")
-        print(option_chain.head(10))
+        return
+
+    print(f"\n{symbol} option chain (first {rows} rows):")
+    print(option_chain.head(rows))
+
+if __name__ == "__main__":
+    example_usage()
