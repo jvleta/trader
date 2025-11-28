@@ -69,3 +69,27 @@ def test_plot_payoff(monkeypatch):
     assert shown["called"]
     assert len(xdata) == 1000
     np.testing.assert_allclose(ydata, payoff.long_call_payoff(xdata, strike=100))
+
+
+def test_plot_payoffs(monkeypatch):
+    shown = {"called": False}
+    monkeypatch.setattr(plt, "show", lambda: shown.__setitem__("called", True))
+    plt.close("all")
+
+    payoffs = {
+        "call": payoff.make_payoff(payoff.long_call_payoff, strike=100),
+        "put": payoff.make_payoff(payoff.long_put_payoff, strike=100),
+    }
+    payoff.plot_payoffs(payoffs, min_asset_price=80, max_asset_price=120)
+
+    fig = plt.gcf()
+    ax = fig.axes[0]
+    lines = ax.lines
+
+    assert shown["called"]
+    assert len(lines) == 2
+
+    xdata = np.asarray(lines[0].get_xdata(), dtype=float)
+    np.testing.assert_allclose(xdata, lines[1].get_xdata())
+    np.testing.assert_allclose(lines[0].get_ydata(), payoffs["call"](xdata))
+    np.testing.assert_allclose(lines[1].get_ydata(), payoffs["put"](xdata))
