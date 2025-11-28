@@ -2,81 +2,58 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def call_payoff(asset_price, strike):
-    # Call option payoff: max(S - E, 0)
+def long_call_payoff(asset_price, strike):
+    """Long call payoff: max(S - E, 0)."""
     return np.maximum(asset_price - strike, 0)
 
 
-def put_payoff(asset_price, strike):
-    # Put option payoff: max(E - S, 0)
+def long_put_payoff(asset_price, strike):
+    """Long put payoff: max(E - S, 0)."""
     return np.maximum(strike - asset_price, 0)
 
 
-class Payoff(object):
-    """Base payoff calculator with no plotting concerns."""
-
-    def __init__(self, exercise_price):
-        self.exercise_price = exercise_price
-
-    def __call__(self, asset_price):
-        """Return payoff for given asset prices; subclasses must override."""
-        raise NotImplementedError("Subclasses must implement this method")
+def short_call_payoff(asset_price, strike):
+    """Short call payoff: -max(S - E, 0)."""
+    return -long_call_payoff(asset_price, strike)
 
 
-class CallOptionPayoff(Payoff):
-    """European call option payoff."""
-
-    def __init__(self, exercise_price):
-        """Initialize call option payoff with strike price."""
-        super().__init__(exercise_price)
-
-    def __call__(self, asset_price):
-        """Return call option payoff for the given asset prices."""
-        return call_payoff(asset_price, self.exercise_price)
+def short_put_payoff(asset_price, strike):
+    """Short put payoff: -max(E - S, 0)."""
+    return -long_put_payoff(asset_price, strike)
 
 
-class PutOptionPayoff(Payoff):
-    """European put option payoff."""
-
-    def __init__(self, exercise_price):
-        """Initialize put option payoff with strike price."""
-        super().__init__(exercise_price)
-
-    def __call__(self, asset_price):
-        """Return put option payoff for the given asset prices."""
-        return put_payoff(asset_price, self.exercise_price)
+def bull_spread_payoff(asset_price, lower_strike, upper_strike):
+    """Bull spread from long lower-strike call and short higher-strike call."""
+    return long_call_payoff(asset_price, lower_strike) - long_call_payoff(
+        asset_price, upper_strike
+    )
 
 
-class BullSpreadPayoff(Payoff):
-    """Bull spread constructed from two call options."""
+def butterfly_spread_payoff(asset_price, low_strike, mid_strike, high_strike):
+    """Butterfly spread from long low/high calls and short twice mid call."""
+    return (
+        long_call_payoff(asset_price, low_strike)
+        - 2 * long_call_payoff(asset_price, mid_strike)
+        + long_call_payoff(asset_price, high_strike)
+    )
 
-    def __init__(self, exercise_price1, exercise_price2):
-        """Initialize bull spread with lower and upper strikes."""
-        super().__init__((exercise_price1, exercise_price2))
+# TODO: Implement straddle payoff diagram.
+# TODO: Implement strangle payoff diagram.
+# TODO: Implement covered call payoff diagram.
+# TODO: Implement protective put payoff diagram.
+# TODO: Implement collar payoff diagram.
+# TODO: Implement iron condor payoff diagram.
+# TODO: Implement iron butterfly payoff diagram.
+# TODO: Implement calendar spread payoff diagram.
+# TODO: Implement ratio spread payoff diagram.
+# TODO: Implement condor payoff diagram.
 
-    def __call__(self, asset_price):
-        """Return bull spread payoff for the given asset prices."""
-        exercise_price1, exercise_price2 = self.exercise_price
-        return call_payoff(asset_price, exercise_price1) - call_payoff(
-            asset_price, exercise_price2
-        )
-
-
-class ButterflySpreadPayoff(Payoff):
-    """Butterfly spread constructed from three call options."""
-
-    def __init__(self, low_strike, mid_strike, high_strike):
-        """Initialize butterfly spread with low, middle, and high strikes."""
-        super().__init__((low_strike, mid_strike, high_strike))
-
-    def __call__(self, asset_price):
-        """Return butterfly spread payoff for the given asset prices."""
-        low_strike, mid_strike, high_strike = self.exercise_price
-        return (
-            call_payoff(asset_price, low_strike)
-            - 2 * call_payoff(asset_price, mid_strike)
-            + call_payoff(asset_price, high_strike)
-        )
+def make_payoff(payoff_fn, *args, **kwargs):
+    """
+    Generic factory: returns a callable that binds payoff params except asset_price.
+    Assumes payoff_fn takes asset_price as its first parameter.
+    """
+    return lambda asset_price: payoff_fn(asset_price, *args, **kwargs)
 
 
 def plot_payoff(
@@ -91,7 +68,8 @@ def plot_payoff(
     asset_prices = np.linspace(min_asset_price, max_asset_price, 1000)
     payout_values = payoff(asset_prices)
 
-    inferred_title = title or f"{payoff.__class__.__name__} Payoff"
+    payoff_name = getattr(payoff, "__name__", payoff.__class__.__name__)
+    inferred_title = title or f"{payoff_name} Payoff"
 
     plt.figure()
     plt.plot(asset_prices, payout_values)
@@ -102,10 +80,16 @@ def plot_payoff(
     plt.grid()
     plt.show()
 
+# TODO: Add unit tests for payoff functions and plotting.
 
+# TODO: Add type hints for all functions.
+
+# TODO: Add docstrings with examples for all functions.
+
+# TODO: Add a plotting function that supports multiple payoffs on the same graph.
 if __name__ == "__main__":
     # Example usage
-    call_payoff_example = CallOptionPayoff(exercise_price=95)
+    call_payoff_example = make_payoff(long_call_payoff, strike=95)
     plot_payoff(
         call_payoff_example,
         min_asset_price=80,
@@ -114,7 +98,7 @@ if __name__ == "__main__":
         title="Call Option Payoff",
     )
 
-    put_payoff_example = PutOptionPayoff(exercise_price=105)
+    put_payoff_example = make_payoff(long_put_payoff, strike=105)
     plot_payoff(
         put_payoff_example,
         min_asset_price=80,
@@ -123,7 +107,7 @@ if __name__ == "__main__":
         title="Put Option Payoff",
     )
 
-    bull_spread = BullSpreadPayoff(exercise_price1=90, exercise_price2=110)
+    bull_spread = make_payoff(bull_spread_payoff, lower_strike=90, upper_strike=110)
     plot_payoff(
         bull_spread,
         min_asset_price=80,
@@ -131,8 +115,8 @@ if __name__ == "__main__":
         title="Bull Spread Payoff",
     )
 
-    butterfly_spread = ButterflySpreadPayoff(
-        low_strike=90, mid_strike=100, high_strike=110
+    butterfly_spread = make_payoff(
+        butterfly_spread_payoff, low_strike=90, mid_strike=100, high_strike=110
     )
     plot_payoff(
         butterfly_spread,
