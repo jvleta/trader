@@ -90,6 +90,6 @@ def test_plot_payoffs(monkeypatch):
     assert len(lines) == 2
 
     xdata = np.asarray(lines[0].get_xdata(), dtype=float)
-    np.testing.assert_allclose(xdata, lines[1].get_xdata())
-    np.testing.assert_allclose(lines[0].get_ydata(), payoffs["call"](xdata))
-    np.testing.assert_allclose(lines[1].get_ydata(), payoffs["put"](xdata))
+    np.testing.assert_allclose(xdata, np.asarray(lines[1].get_xdata(), dtype=float))
+    np.testing.assert_allclose(np.asarray(lines[0].get_ydata()), payoffs["call"](xdata))
+    np.testing.assert_allclose(np.asarray(lines[1].get_ydata()), payoffs["put"](xdata))
