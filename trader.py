@@ -147,12 +147,13 @@ def fetch_option_chain(
 
     if df.empty:
         return pd.DataFrame()
+    df = df.copy()
 
     if "dte" in df.columns:
-        df["T_years"] = pd.to_numeric(df["dte"], errors="coerce") / 365.0
+        df.loc[:, "T_years"] = pd.to_numeric(df["dte"], errors="coerce") / 365.0
     else:
         today = date.today()
-        df["T_years"] = df["expiration"].apply(lambda d: (d - today).days / 365.0)
+        df.loc[:, "T_years"] = df["expiration"].apply(lambda d: (d - today).days / 365.0)
 
     price_candidates = [
         col
@@ -166,7 +167,7 @@ def fetch_option_chain(
         if col in df.columns
     ]
     if price_candidates:
-        df["market_price"] = (
+        df.loc[:, "market_price"] = (
             df[price_candidates]
             .apply(pd.to_numeric, errors="coerce")
             .bfill(axis=1)
