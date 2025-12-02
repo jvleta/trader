@@ -53,7 +53,7 @@ def get_spot_price(symbol: str) -> float:
         response = obb.equity.price.quote(symbol=symbol)
         prices = getattr(response, "data", None) or getattr(response, "results", None)
         latest = prices[-1] if isinstance(prices, (list, tuple)) else prices
-        for field in ("close", "price", "last", "regular_market_price"):
+        for field in ("close", "price", "last_price", "last", "regular_market_price"):
             value = getattr(latest, field, None)
             if value is not None and np.isfinite(value):
                 return float(value)
@@ -122,8 +122,9 @@ def fetch_underlying_data(symbol: str) -> dict:
     return {"symbol": symbol, "spot_price": S, "dividend_yield": q, "risk_free_rate": r}
 
 
-
-def fetch_option_chain(symbol: str, filter_expiries: list | None = None) -> pd.DataFrame:
+def fetch_option_chain(
+    symbol: str, filter_expiries: list | None = None
+) -> pd.DataFrame:
     """Fetch the option chain for the given underlying symbol using OpenBB."""
     filter_expiries = filter_expiries or []
     try:
@@ -194,21 +195,74 @@ def fetch_option_chain(symbol: str, filter_expiries: list | None = None) -> pd.D
 
     return result.reset_index(drop=True)
 
-def example_usage(symbol: str = "AAPL", rows: int = 10) -> None:
+
+def compute_metrics(df: pd.DataFrame, S: float):
+    """Compute covered-call metrics for each contract."""
+    df = df.copy()
+
+    # Filter for calls only
+    df = df[df["option_type"] == "call"]
+
+    # Mid price = (bid + ask)/2
+    df["premium"] = (df["bid"] + df["ask"]) / 2
+
+    # Remove contracts with no liquidity
+    df = df[df["premium"] > 0]
+
+    # % OTM
+    df["pct_otm"] = (df["strike"] - S) / S * 100
+
+    # Breakeven point
+    df["breakeven"] = S - df["premium"]
+
+    # Annualized yield from premium
+    df["dte"] = (pd.to_datetime(df["expiration"]) - pd.Timestamp.today()).dt.days
+    df["annualized_yield"] = (df["premium"] / S) * (365 / df["dte"])
+
+    df = df[df["strike"] >= S]
+
+    return df
+
+
+def screen(symbol: str):
+    print(f"\n📈 COVERED CALL SCREEN FOR {symbol}\n")
+
+    # Underlying data
     data = fetch_underlying_data(symbol)
-    print(
-        f"{symbol} spot: ${data['spot_price']:.2f} | "
-        f"dividend yield: {data['dividend_yield']*100:.2f}% | "
-        f"risk-free rate: {data['risk_free_rate']*100:.2f}%"
-    )
+    S, q, r = data["spot_price"], data["dividend_yield"], data["risk_free_rate"]
 
-    option_chain = fetch_option_chain(symbol)
-    if option_chain.empty:
-        print(f"No option chain data available for {symbol}.")
-        return
+    print(f"Spot Price (S): {S:.2f}")
+    print(f"Dividend Yield (q): {q}")
+    print(f"Risk-Free Rate (r): {r}\n")
 
-    print(f"\n{symbol} option chain (first {rows} rows):")
-    print(option_chain.head(rows))
+    # Option chain
+    df_chain = fetch_option_chain(symbol)
+    print(f"Fetched {len(df_chain)} option contracts.\n")
+
+    # Compute covered-call metrics
+    df_cc = compute_metrics(df_chain, S)
+    print(f"Computed covered-call metrics for {len(df_cc)} contracts.\n")
+
+    # Restrict to reasonable expirations (7–60 DTE)
+    df_cc = df_cc[(df_cc["dte"] >= 7) & (df_cc["dte"] <= 60)]
+
+    # Sort by annualized yield
+    df_best = df_cc.sort_values("annualized_yield", ascending=False)
+
+    # Display top 20
+    cols = [
+        "expiration",
+        "strike",
+        "premium",
+        "dte",
+        "pct_otm",
+        "breakeven",
+        "annualized_yield",
+    ]
+    print(df_best[cols].head(20).to_string(index=False))
+
+    print("\nDone.\n")
+
 
 if __name__ == "__main__":
-    example_usage()
+    screen("F")

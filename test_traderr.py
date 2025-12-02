@@ -11,19 +11,19 @@ if "openbb" not in sys.modules:
     stub_module.obb = types.SimpleNamespace()
     sys.modules["openbb"] = stub_module
 
-import openbb_wrapper
+import trader
 
 
 def test_parse_dividend_amounts_supports_multiple_shapes():
     df = pd.DataFrame([{"amount": 1.25}, {"cash_amount": "2.75"}])
-    assert openbb_wrapper._parse_dividend_amounts({"data": df}) == [1.25, 2.75]
+    assert trader._parse_dividend_amounts({"data": df}) == [1.25, 2.75]
     mixed = df.to_dict(orient="records") + [None]
-    assert openbb_wrapper._parse_dividend_amounts(mixed) == [1.25, 2.75]
+    assert trader._parse_dividend_amounts(mixed) == [1.25, 2.75]
 
 
 def test_parse_dividend_amounts_rejects_non_numeric():
     with pytest.raises(ValueError):
-        openbb_wrapper._parse_dividend_amounts([{"amount": "abc"}])
+        trader._parse_dividend_amounts([{"amount": "abc"}])
 
 
 def test_get_spot_price_uses_latest_close(monkeypatch):
@@ -32,9 +32,9 @@ def test_get_spot_price_uses_latest_close(monkeypatch):
     )
     price = types.SimpleNamespace(quote=lambda symbol: quote_response)
     equity = types.SimpleNamespace(price=price)
-    monkeypatch.setattr(openbb_wrapper, "obb", types.SimpleNamespace(equity=equity))
+    monkeypatch.setattr(trader, "obb", types.SimpleNamespace(equity=equity))
 
-    assert openbb_wrapper.get_spot_price("XYZ") == pytest.approx(101.5)
+    assert trader.get_spot_price("XYZ") == pytest.approx(101.5)
 
 
 def test_get_dividend_yield_aggregates_amounts(monkeypatch):
@@ -45,10 +45,10 @@ def test_get_dividend_yield_aggregates_amounts(monkeypatch):
         )
     )
     equity = types.SimpleNamespace(fundamental=fundamental, price=types.SimpleNamespace())
-    monkeypatch.setattr(openbb_wrapper, "obb", types.SimpleNamespace(equity=equity))
-    monkeypatch.setattr(openbb_wrapper, "get_spot_price", lambda symbol: 100.0)
+    monkeypatch.setattr(trader, "obb", types.SimpleNamespace(equity=equity))
+    monkeypatch.setattr(trader, "get_spot_price", lambda symbol: 100.0)
 
-    assert openbb_wrapper.get_dividend_yield("XYZ") == pytest.approx(0.015)
+    assert trader.get_dividend_yield("XYZ") == pytest.approx(0.015)
 
 
 def test_get_dividend_yield_raises_on_missing_data(monkeypatch):
@@ -56,11 +56,11 @@ def test_get_dividend_yield_raises_on_missing_data(monkeypatch):
         dividends=lambda symbol, start_date, end_date: types.SimpleNamespace(data=[])
     )
     equity = types.SimpleNamespace(fundamental=fundamental, price=types.SimpleNamespace())
-    monkeypatch.setattr(openbb_wrapper, "obb", types.SimpleNamespace(equity=equity))
-    monkeypatch.setattr(openbb_wrapper, "get_spot_price", lambda symbol: 50.0)
+    monkeypatch.setattr(trader, "obb", types.SimpleNamespace(equity=equity))
+    monkeypatch.setattr(trader, "get_spot_price", lambda symbol: 50.0)
 
     with pytest.raises(RuntimeError):
-        openbb_wrapper.get_dividend_yield("XYZ")
+        trader.get_dividend_yield("XYZ")
 
 
 def test_get_risk_free_rate_prefers_recent(monkeypatch):
@@ -74,18 +74,18 @@ def test_get_risk_free_rate_prefers_recent(monkeypatch):
     )
     fixedincome = types.SimpleNamespace(government=government)
     monkeypatch.setattr(
-        openbb_wrapper, "obb", types.SimpleNamespace(fixedincome=fixedincome)
+        trader, "obb", types.SimpleNamespace(fixedincome=fixedincome)
     )
 
-    assert openbb_wrapper.get_risk_free_rate() == pytest.approx(0.045)
+    assert trader.get_risk_free_rate() == pytest.approx(0.045)
 
 
 def test_fetch_underlying_data_combines_fields(monkeypatch):
-    monkeypatch.setattr(openbb_wrapper, "get_spot_price", lambda symbol: 10.0)
-    monkeypatch.setattr(openbb_wrapper, "get_dividend_yield", lambda symbol: 0.02)
-    monkeypatch.setattr(openbb_wrapper, "get_risk_free_rate", lambda: 0.03)
+    monkeypatch.setattr(trader, "get_spot_price", lambda symbol: 10.0)
+    monkeypatch.setattr(trader, "get_dividend_yield", lambda symbol: 0.02)
+    monkeypatch.setattr(trader, "get_risk_free_rate", lambda: 0.03)
 
-    assert openbb_wrapper.fetch_underlying_data("XYZ") == {
+    assert trader.fetch_underlying_data("XYZ") == {
         "symbol": "XYZ",
         "spot_price": 10.0,
         "dividend_yield": 0.02,
@@ -130,10 +130,10 @@ def test_fetch_option_chain_filters_and_normalizes(monkeypatch):
     options = types.SimpleNamespace(chains=lambda symbol: ChainResponse())
     derivatives = types.SimpleNamespace(options=options)
     monkeypatch.setattr(
-        openbb_wrapper, "obb", types.SimpleNamespace(derivatives=derivatives)
+        trader, "obb", types.SimpleNamespace(derivatives=derivatives)
     )
 
-    df = openbb_wrapper.fetch_option_chain("XYZ", filter_expiries=[date(2024, 12, 20)])
+    df = trader.fetch_option_chain("XYZ", filter_expiries=[date(2024, 12, 20)])
 
     assert len(df) == 1
     row = df.iloc[0]
