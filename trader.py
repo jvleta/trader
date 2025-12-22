@@ -2,6 +2,8 @@ from datetime import date, timedelta
 import numpy as np
 import pandas as pd
 from openbb import obb
+from llm import explain_candidates, LLMConfig
+
 
 
 def _parse_dividend_amounts(dividends) -> list[float]:
@@ -263,7 +265,21 @@ def screen(symbol: str):
     print(df_best[cols].head(20).to_string(index=False))
 
     print("\nDone.\n")
-
+    return df_best
 
 if __name__ == "__main__":
-    screen("F")
+    df_candidates = screen("F")
+    risk_profile = {
+        "capital_per_trade": 5000,
+        "max_drawdown_tolerance_pct": 15,
+        "prefer_sectors": ["XLU", "XLP"],
+        "avoid_underlying_price_below": 15,
+    }
+
+    markdown_text = explain_candidates(
+        df_candidates,
+        risk_profile=risk_profile,
+        cfg=LLMConfig(model="gpt-4.1-mini", temperature=0.2),
+    )
+
+    print(markdown_text)
