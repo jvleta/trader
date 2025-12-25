@@ -6,11 +6,6 @@ import numpy as np
 import pandas as pd
 import pytest
 
-if "openbb" not in sys.modules:
-    stub_module = types.ModuleType("openbb")
-    stub_module.obb = types.SimpleNamespace()
-    sys.modules["openbb"] = stub_module
-
 import trader
 
 
