@@ -5,7 +5,6 @@ from openbb import obb
 from llm import explain_candidates, LLMConfig
 
 
-
 def _parse_dividend_amounts(dividends) -> list[float]:
     if dividends is None:
         return []
@@ -155,7 +154,9 @@ def fetch_option_chain(
         df.loc[:, "T_years"] = pd.to_numeric(df["dte"], errors="coerce") / 365.0
     else:
         today = date.today()
-        df.loc[:, "T_years"] = df["expiration"].apply(lambda d: (d - today).days / 365.0)
+        df.loc[:, "T_years"] = df["expiration"].apply(
+            lambda d: (d - today).days / 365.0
+        )
 
     price_candidates = [
         col
@@ -199,7 +200,7 @@ def fetch_option_chain(
     return result.reset_index(drop=True)
 
 
-def compute_metrics(df: pd.DataFrame, S: float):
+def compute_covered_call_metrics(df: pd.DataFrame, spot_price: float):
     """Compute covered-call metrics for each contract."""
     df = df.copy()
 
@@ -213,16 +214,19 @@ def compute_metrics(df: pd.DataFrame, S: float):
     df = df[df["premium"] > 0]
 
     # % OTM
-    df["pct_otm"] = (df["strike"] - S) / S * 100
+    df["pct_otm"] = (df["strike"] - spot_price) / spot_price * 100
 
     # Breakeven point
-    df["breakeven"] = S - df["premium"]
+    df["breakeven"] = spot_price - df["premium"]
+
+    # Days to expiration
+    df["dte"] = (pd.to_datetime(df["expiration"]) - pd.Timestamp.today()).dt.days
 
     # Annualized yield from premium
-    df["dte"] = (pd.to_datetime(df["expiration"]) - pd.Timestamp.today()).dt.days
-    df["annualized_yield"] = (df["premium"] / S) * (365 / df["dte"])
+    df["annualized_yield"] = (df["premium"] / spot_price) * (365.0 / df["dte"])
 
-    df = df[df["strike"] >= S]
+    # Filter for strikes at or above spot price
+    df = df[df["strike"] >= spot_price]
 
     return df
 
@@ -243,7 +247,7 @@ def screen(symbol: str):
     print(f"Fetched {len(df_chain)} option contracts.\n")
 
     # Compute covered-call metrics
-    df_cc = compute_metrics(df_chain, S)
+    df_cc = compute_covered_call_metrics(df_chain, S)
     print(f"Computed covered-call metrics for {len(df_cc)} contracts.\n")
 
     # Restrict to reasonable expirations (7–60 DTE)
@@ -267,7 +271,8 @@ def screen(symbol: str):
     print("\nDone.\n")
     return df_best
 
-if __name__ == "__main__":
+
+def main():
     df_candidates = screen("F")
     risk_profile = {
         "capital_per_trade": 5000,
@@ -283,3 +288,7 @@ if __name__ == "__main__":
     )
 
     print(markdown_text)
+
+
+if __name__ == "__main__":
+    main()
