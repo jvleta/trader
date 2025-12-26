@@ -1,0 +1,14 @@
+SEED = 42
+initial_cash = 50_000.0
+start_price = 50.0
+mu_annual = 0.08           # drift for synthetic GBM
+iv_annual = 0.28           # implied volatility (constant) for pricing
+risk_free_annual = 0.02    # risk-free rate (constant)
+dte_days = 30              # days to expiry for each option
+contracts = 1              # contracts per cycle
+target_put_delta = 0.25    # |delta| for CSP
+target_call_delta = 0.25   # delta for CC
+commission_per_contract = 0.65
+slippage_bps = 2           # slippage in basis points applied to premium (each leg)
+years_to_simulate = 2.0    # when using synthetic GBM
+use_csv_if_present = True  # set True to load price.csv if available
