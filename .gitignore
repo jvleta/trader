@@ -3,3 +3,7 @@ __pycache__
 .ipynb_checkpoints
 *.pyc
 .coverage
+
+# Backtest / simulator outputs (generated artifacts)
+outputs_smoke/
+
