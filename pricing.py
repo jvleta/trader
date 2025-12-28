@@ -1,7 +1,8 @@
+import math
 import numpy as np
 
 def _norm_cdf(x: float) -> float:
-    return 0.5 * (1.0 + np.erf(x / np.sqrt(2.0)))
+    return 0.5 * (1.0 + math.erf(x / math.sqrt(2.0)))
 
 
 def bs_d1(S: float, K: float, r: float, sigma: float, T: float) -> float:
