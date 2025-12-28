@@ -1,25 +1,28 @@
-import math
+import numpy as np
 
 def _norm_cdf(x: float) -> float:
-    return 0.5 * (1.0 + math.erf(x / math.sqrt(2.0)))
+    return 0.5 * (1.0 + np.erf(x / np.sqrt(2.0)))
 
 
 def bs_d1(S: float, K: float, r: float, sigma: float, T: float) -> float:
     if S <= 0 or K <= 0 or sigma <= 0 or T <= 0:
         return float("nan")
-    return (math.log(S / K) + (r + 0.5 * sigma * sigma) * T) / (sigma * math.sqrt(T))
+    sqrt_T = np.sqrt(T)
+    return (np.log(S / K) + (r + 0.5 * sigma * sigma) * T) / (sigma * sqrt_T)
 
 
 def bs_call_price(S: float, K: float, r: float, sigma: float, T: float) -> float:
     d1 = bs_d1(S, K, r, sigma, T)
-    d2 = d1 - sigma * math.sqrt(T)
-    return S * _norm_cdf(d1) - K * math.exp(-r * T) * _norm_cdf(d2)
+    sqrt_T = np.sqrt(T)
+    d2 = d1 - sigma * sqrt_T
+    return S * _norm_cdf(d1) - K * np.exp(-r * T) * _norm_cdf(d2)
 
 
 def bs_put_price(S: float, K: float, r: float, sigma: float, T: float) -> float:
     d1 = bs_d1(S, K, r, sigma, T)
-    d2 = d1 - sigma * math.sqrt(T)
-    return K * math.exp(-r * T) * _norm_cdf(-d2) - S * _norm_cdf(-d1)
+    sqrt_T = np.sqrt(T)
+    d2 = d1 - sigma * sqrt_T
+    return K * np.exp(-r * T) * _norm_cdf(-d2) - S * _norm_cdf(-d1)
 
 
 def bs_call_delta(S: float, K: float, r: float, sigma: float, T: float) -> float:
