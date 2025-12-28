@@ -1,4 +1,5 @@
 SEED = 42
+TRADING_DAYS_PER_YEAR = 252
 initial_cash = 50_000.0
 start_price = 50.0
 mu_annual = 0.08           # drift for synthetic GBM
