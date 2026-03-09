@@ -2,11 +2,9 @@ from datetime import date, timedelta
 import numpy as np
 import pandas as pd
 from openbb import obb
-from llm import explain_candidates, LLMConfig
 
 
-
-def _parse_dividend_amounts(dividends) -> list[float]:
+def parse_dividend_amounts(dividends) -> list[float]:
     if dividends is None:
         return []
 
@@ -75,7 +73,7 @@ def get_dividend_yield(symbol: str) -> float:
         dividends = getattr(response, "data", None) or getattr(
             response, "results", None
         )
-        amounts = _parse_dividend_amounts(dividends)
+        amounts = parse_dividend_amounts(dividends)
         if not amounts:
             raise ValueError("No valid dividend amounts found")
 
@@ -155,7 +153,9 @@ def fetch_option_chain(
         df.loc[:, "T_years"] = pd.to_numeric(df["dte"], errors="coerce") / 365.0
     else:
         today = date.today()
-        df.loc[:, "T_years"] = df["expiration"].apply(lambda d: (d - today).days / 365.0)
+        df.loc[:, "T_years"] = df["expiration"].apply(
+            lambda d: (d - today).days / 365.0
+        )
 
     price_candidates = [
         col
@@ -227,24 +227,34 @@ def compute_metrics(df: pd.DataFrame, S: float):
     return df
 
 
-def screen(symbol: str):
+def screen(symbol: str, top_n: int = 20):
     print(f"\n📈 COVERED CALL SCREEN FOR {symbol}\n")
 
     # Underlying data
     data = fetch_underlying_data(symbol)
     S, q, r = data["spot_price"], data["dividend_yield"], data["risk_free_rate"]
 
-    print(f"Spot Price (S): {S:.2f}")
-    print(f"Dividend Yield (q): {q}")
-    print(f"Risk-Free Rate (r): {r}\n")
+    metrics = (
+        ("Spot Price (S)", f"${S:,.2f}"),
+        ("Dividend Yield (q)", f"{q * 100:.2f}%"),
+        ("Risk-Free Rate (r)", f"{r * 100:.2f}%"),
+    )
+    label_width = max(len(label) for label, _ in metrics)
+    value_width = max(len(value) for _, value in metrics)
+    print(f"{'Metric':<{label_width}}  {'Value':>{value_width}}")
+    print(f"{'-' * label_width}  {'-' * value_width}")
+    for label, value in metrics:
+        print(f"{label:<{label_width}}  {value:>{value_width}}")
+    print()
 
     # Option chain
     df_chain = fetch_option_chain(symbol)
-    print(f"Fetched {len(df_chain)} option contracts.\n")
+    footnotes = []
+    footnotes.append(f"Fetched {len(df_chain)} option contracts.")
 
     # Compute covered-call metrics
     df_cc = compute_metrics(df_chain, S)
-    print(f"Computed covered-call metrics for {len(df_cc)} contracts.\n")
+    footnotes.append(f"Computed covered-call metrics for {len(df_cc)} contracts.")
 
     # Restrict to reasonable expirations (7–60 DTE)
     df_cc = df_cc[(df_cc["dte"] >= 7) & (df_cc["dte"] <= 60)]
@@ -252,7 +262,7 @@ def screen(symbol: str):
     # Sort by annualized yield
     df_best = df_cc.sort_values("annualized_yield", ascending=False)
 
-    # Display top 20
+    # Display top choices in table
     cols = [
         "expiration",
         "strike",
@@ -262,24 +272,49 @@ def screen(symbol: str):
         "breakeven",
         "annualized_yield",
     ]
-    print(df_best[cols].head(20).to_string(index=False))
 
-    print("\nDone.\n")
-    return df_best
+    df_display = df_best[cols].head(top_n).copy()
+    df_display = df_display.rename(
+        columns={
+            "expiration": "Expiration",
+            "strike": "Strike",
+            "premium": "Premium",
+            "dte": "DTE",
+            "pct_otm": "% OTM",
+            "breakeven": "Breakeven",
+            "annualized_yield": "Ann. Yield",
+        }
+    )
+    table = df_display.to_string(
+        index=False,
+        formatters={
+            "Strike": lambda v: f"${v:,.2f}",
+            "Premium": lambda v: f"${v:,.2f}",
+            "DTE": lambda v: f"{int(v)}",
+            "% OTM": lambda v: f"{v:.2f}%",
+            "Breakeven": lambda v: f"${v:,.2f}",
+            "Ann. Yield": lambda v: f"{v * 100:.2f}%",
+        },
+    )
+    lines = table.splitlines()
+    if lines:
+        lines.insert(1, "-" * len(lines[0]))
+    print("\n".join(lines))
+    print("\nNotes:")
+    for idx, note in enumerate(footnotes, start=1):
+        print(f"{idx}. {note}")
+
 
 if __name__ == "__main__":
-    df_candidates = screen("F")
-    risk_profile = {
-        "capital_per_trade": 5000,
-        "max_drawdown_tolerance_pct": 15,
-        "prefer_sectors": ["XLU", "XLP"],
-        "avoid_underlying_price_below": 15,
-    }
+    import argparse
 
-    markdown_text = explain_candidates(
-        df_candidates,
-        risk_profile=risk_profile,
-        cfg=LLMConfig(model="gpt-4.1-mini", temperature=0.2),
+    parser = argparse.ArgumentParser(description="Screen covered-call candidates.")
+    parser.add_argument("symbol", help="Underlying stock symbol.")
+    parser.add_argument(
+        "--top-n",
+        type=int,
+        default=20,
+        help="Number of rows to show in the top candidate table (default: 20).",
     )
-
-    print(markdown_text)
+    args = parser.parse_args()
+    screen(args.symbol, top_n=args.top_n)

@@ -1,6 +1,6 @@
 import sys
 import types
-from datetime import date, timedelta
+from datetime import date
 
 import numpy as np
 import pandas as pd
@@ -16,14 +16,14 @@ import trader
 
 def test_parse_dividend_amounts_supports_multiple_shapes():
     df = pd.DataFrame([{"amount": 1.25}, {"cash_amount": "2.75"}])
-    assert trader._parse_dividend_amounts({"data": df}) == [1.25, 2.75]
+    assert trader.parse_dividend_amounts({"data": df}) == [1.25, 2.75]
     mixed = df.to_dict(orient="records") + [None]
-    assert trader._parse_dividend_amounts(mixed) == [1.25, 2.75]
+    assert trader.parse_dividend_amounts(mixed) == [1.25, 2.75]
 
 
 def test_parse_dividend_amounts_rejects_non_numeric():
     with pytest.raises(ValueError):
-        trader._parse_dividend_amounts([{"amount": "abc"}])
+        trader.parse_dividend_amounts([{"amount": "abc"}])
 
 
 def test_parse_dividend_amounts_handles_plain_dict_and_fallback():
@@ -33,8 +33,8 @@ def test_parse_dividend_amounts_handles_plain_dict_and_fallback():
                 raise ValueError("boom")
             return {"amount": 2}
 
-    assert trader._parse_dividend_amounts({"amount": 3}) == [3.0]
-    assert trader._parse_dividend_amounts(BrokenToDict()) == [2.0]
+    assert trader.parse_dividend_amounts({"amount": 3}) == [3.0]
+    assert trader.parse_dividend_amounts(BrokenToDict()) == [2.0]
 
 
 def test_get_spot_price_uses_latest_close(monkeypatch):
