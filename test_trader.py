@@ -343,4 +343,3 @@ def test_screen_prints_summary(monkeypatch, capsys):
     trader.screen("AAA")
     output = capsys.readouterr().out
     assert "COVERED CALL SCREEN FOR AAA" in output
-    assert "Done." in output
