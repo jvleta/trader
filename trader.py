@@ -14,8 +14,6 @@ def parse_dividend_amounts(dividends) -> list[float]:
             dividends = dividends["data"]
         elif "results" in dividends:
             dividends = dividends["results"]
-        else:
-            dividends = dividends
 
     if hasattr(dividends, "to_dict"):
         try:
