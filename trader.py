@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from datetime import date, timedelta
 from math import erf, sqrt
 import numpy as np
@@ -28,6 +29,18 @@ _FORMATTERS = {
     "Delta":      lambda v: f"{v:.3f}" if pd.notna(v) else "N/A",
     "Spread":     lambda v: f"${v:,.2f}",
 }
+
+# Populated after compute functions are defined (see bottom of module-level setup).
+_STRATEGIES: dict[str, tuple[str, Callable]] = {}
+
+
+def _print_key_value_table(rows: tuple[tuple[str, str], ...]) -> None:
+    label_width = max(len(label) for label, _ in rows)
+    value_width = max(len(value) for _, value in rows)
+    print(f"{'Metric':<{label_width}}  {'Value':>{value_width}}")
+    print(f"{'-' * label_width}  {'-' * value_width}")
+    for label, value in rows:
+        print(f"{label:<{label_width}}  {value:>{value_width}}")
 
 
 def parse_dividend_amounts(dividends) -> list[float]:
@@ -283,34 +296,31 @@ def compute_csp_metrics(df: pd.DataFrame, S: float, r: float = 0.0, q: float = 0
     return _compute_option_metrics(df, S, r, q, "put")
 
 
+_STRATEGIES["cc"]  = ("COVERED CALL",     compute_cc_metrics)
+_STRATEGIES["csp"] = ("CASH SECURED PUT",  compute_csp_metrics)
+
+
 def screen(symbol: str, strategy: str = "cc", top_n: int = 20):
     strategy = strategy.lower()
-    if strategy not in ("cc", "csp"):
-        raise ValueError(f"Unknown strategy '{strategy}'. Use 'cc' or 'csp'.")
+    if strategy not in _STRATEGIES:
+        raise ValueError(f"Unknown strategy '{strategy}'. Choose from: {', '.join(_STRATEGIES)}.")
 
-    strategy_label = "COVERED CALL" if strategy == "cc" else "CASH SECURED PUT"
+    strategy_label, compute_fn = _STRATEGIES[strategy]
     print(f"\n📈 {strategy_label} SCREEN FOR {symbol}\n")
 
     data = fetch_underlying_data(symbol)
     S, q, r = data["spot_price"], data["dividend_yield"], data["risk_free_rate"]
 
-    metrics = (
+    _print_key_value_table((
         ("Spot Price (S)", f"${S:,.2f}"),
         ("Dividend Yield (q)", f"{q * 100:.2f}%"),
         ("Risk-Free Rate (r)", f"{r * 100:.2f}%"),
-    )
-    label_width = max(len(label) for label, _ in metrics)
-    value_width = max(len(value) for _, value in metrics)
-    print(f"{'Metric':<{label_width}}  {'Value':>{value_width}}")
-    print(f"{'-' * label_width}  {'-' * value_width}")
-    for label, value in metrics:
-        print(f"{label:<{label_width}}  {value:>{value_width}}")
+    ))
     print()
 
     df_chain = fetch_option_chain(symbol)
     footnotes = [f"Fetched {len(df_chain)} option contracts."]
 
-    compute_fn = compute_cc_metrics if strategy == "cc" else compute_csp_metrics
     df_screened = compute_fn(df_chain, S, r=r, q=q)
     footnotes.append(f"Computed {strategy_label.lower()} metrics for {len(df_screened)} contracts.")
 
@@ -322,8 +332,7 @@ def screen(symbol: str, strategy: str = "cc", top_n: int = 20):
         "breakeven", "annualized_yield", "prob_win", "delta", "bid_ask_spread",
     ]
     cols = [c for c in cols if c in df_best.columns]
-    df_display = df_best[cols].head(top_n).copy()
-    df_display = df_display.rename(columns=_COLUMN_LABELS)
+    df_display = df_best[cols].head(top_n).rename(columns=_COLUMN_LABELS)
     table = df_display.to_string(index=False, formatters=_FORMATTERS)
     lines = table.splitlines()
     if lines:
