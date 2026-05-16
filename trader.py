@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from math import erf, sqrt
 import numpy as np
 import pandas as pd
 from openbb import obb
@@ -201,7 +202,6 @@ def fetch_option_chain(
 
 
 def _norm_cdf(x: np.ndarray) -> np.ndarray:
-    from math import erf, sqrt
     return np.vectorize(lambda v: 0.5 * (1 + erf(v / sqrt(2))))(x).astype(float)
 
 
