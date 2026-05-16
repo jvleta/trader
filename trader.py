@@ -4,6 +4,31 @@ import numpy as np
 import pandas as pd
 from openbb import obb
 
+_COLUMN_LABELS = {
+    "expiration": "Expiration",
+    "strike": "Strike",
+    "premium": "Premium",
+    "dte": "DTE",
+    "pct_otm": "% OTM",
+    "breakeven": "Breakeven",
+    "annualized_yield": "Ann. Yield",
+    "prob_win": "P(Win)",
+    "delta": "Delta",
+    "bid_ask_spread": "Spread",
+}
+
+_FORMATTERS = {
+    "Strike":     lambda v: f"${v:,.2f}",
+    "Premium":    lambda v: f"${v:,.2f}",
+    "DTE":        lambda v: f"{int(v)}",
+    "% OTM":      lambda v: f"{v:.2f}%",
+    "Breakeven":  lambda v: f"${v:,.2f}",
+    "Ann. Yield": lambda v: f"{v * 100:.2f}%",
+    "P(Win)":     lambda v: f"{v * 100:.1f}%" if pd.notna(v) else "N/A",
+    "Delta":      lambda v: f"{v:.3f}" if pd.notna(v) else "N/A",
+    "Spread":     lambda v: f"${v:,.2f}",
+}
+
 
 def parse_dividend_amounts(dividends) -> list[float]:
     if dividends is None:
@@ -298,34 +323,8 @@ def screen(symbol: str, strategy: str = "cc", top_n: int = 20):
     ]
     cols = [c for c in cols if c in df_best.columns]
     df_display = df_best[cols].head(top_n).copy()
-    df_display = df_display.rename(
-        columns={
-            "expiration": "Expiration",
-            "strike": "Strike",
-            "premium": "Premium",
-            "dte": "DTE",
-            "pct_otm": "% OTM",
-            "breakeven": "Breakeven",
-            "annualized_yield": "Ann. Yield",
-            "prob_win": "P(Win)",
-            "delta": "Delta",
-            "bid_ask_spread": "Spread",
-        }
-    )
-    table = df_display.to_string(
-        index=False,
-        formatters={
-            "Strike": lambda v: f"${v:,.2f}",
-            "Premium": lambda v: f"${v:,.2f}",
-            "DTE": lambda v: f"{int(v)}",
-            "% OTM": lambda v: f"{v:.2f}%",
-            "Breakeven": lambda v: f"${v:,.2f}",
-            "Ann. Yield": lambda v: f"{v * 100:.2f}%",
-            "P(Win)": lambda v: f"{v * 100:.1f}%" if pd.notna(v) else "N/A",
-            "Delta": lambda v: f"{v:.3f}" if pd.notna(v) else "N/A",
-            "Spread": lambda v: f"${v:,.2f}",
-        },
-    )
+    df_display = df_display.rename(columns=_COLUMN_LABELS)
+    table = df_display.to_string(index=False, formatters=_FORMATTERS)
     lines = table.splitlines()
     if lines:
         lines.insert(1, "-" * len(lines[0]))
