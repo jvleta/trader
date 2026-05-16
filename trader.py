@@ -226,30 +226,36 @@ def _add_bs_columns(df: pd.DataFrame, S: float, r: float, q: float, option_type:
     return df
 
 
-def compute_cc_metrics(df: pd.DataFrame, S: float, r: float = 0.0, q: float = 0.0) -> pd.DataFrame:
-    """Compute covered-call metrics: yield is premium / spot price."""
-    df = df[df["option_type"] == "call"].copy()
+def _compute_option_metrics(
+    df: pd.DataFrame, S: float, r: float, q: float, option_type: str
+) -> pd.DataFrame:
+    df = df[df["option_type"] == option_type].copy()
     df["premium"] = (df["bid"] + df["ask"]) / 2
     df = df[df["premium"] > 0]
-    df["pct_otm"] = (df["strike"] - S) / S * 100
-    df["breakeven"] = S - df["premium"]
     df["dte"] = (pd.to_datetime(df["expiration"]) - pd.Timestamp.today()).dt.days
-    df["annualized_yield"] = (df["premium"] / S) * (365 / df["dte"])
-    df = df[df["strike"] >= S]
-    return _add_bs_columns(df, S, r, q, "call")
+
+    if option_type == "call":
+        df["pct_otm"] = (df["strike"] - S) / S * 100
+        df["breakeven"] = S - df["premium"]
+        df["annualized_yield"] = (df["premium"] / S) * (365 / df["dte"])
+        df = df[df["strike"] >= S]
+    else:
+        df["pct_otm"] = (S - df["strike"]) / S * 100
+        df["breakeven"] = df["strike"] - df["premium"]
+        df["annualized_yield"] = (df["premium"] / df["strike"]) * (365 / df["dte"])
+        df = df[df["strike"] <= S]
+
+    return _add_bs_columns(df, S, r, q, option_type)
+
+
+def compute_cc_metrics(df: pd.DataFrame, S: float, r: float = 0.0, q: float = 0.0) -> pd.DataFrame:
+    """Covered call: yield is premium / spot price, OTM calls only (strike >= S)."""
+    return _compute_option_metrics(df, S, r, q, "call")
 
 
 def compute_csp_metrics(df: pd.DataFrame, S: float, r: float = 0.0, q: float = 0.0) -> pd.DataFrame:
-    """Compute cash-secured put metrics: yield is premium / strike (cash at risk)."""
-    df = df[df["option_type"] == "put"].copy()
-    df["premium"] = (df["bid"] + df["ask"]) / 2
-    df = df[df["premium"] > 0]
-    df["pct_otm"] = (S - df["strike"]) / S * 100
-    df["breakeven"] = df["strike"] - df["premium"]
-    df["dte"] = (pd.to_datetime(df["expiration"]) - pd.Timestamp.today()).dt.days
-    df["annualized_yield"] = (df["premium"] / df["strike"]) * (365 / df["dte"])
-    df = df[df["strike"] <= S]
-    return _add_bs_columns(df, S, r, q, "put")
+    """Cash-secured put: yield is premium / strike (cash at risk), OTM puts only (strike <= S)."""
+    return _compute_option_metrics(df, S, r, q, "put")
 
 
 def screen(symbol: str, strategy: str = "cc", top_n: int = 20):
