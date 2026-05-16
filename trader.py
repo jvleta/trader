@@ -199,7 +199,35 @@ def fetch_option_chain(
     return result.reset_index(drop=True)
 
 
-def compute_cc_metrics(df: pd.DataFrame, S: float) -> pd.DataFrame:
+def _norm_cdf(x: np.ndarray) -> np.ndarray:
+    from math import erf, sqrt
+    return np.vectorize(lambda v: 0.5 * (1 + erf(v / sqrt(2))))(x).astype(float)
+
+
+def _add_bs_columns(df: pd.DataFrame, S: float, r: float, q: float, option_type: str) -> pd.DataFrame:
+    """Append prob_win, delta, and bid_ask_spread using Black-Scholes d1/d2."""
+    if "implied_vol" in df.columns and "T_years" in df.columns:
+        sigma = df["implied_vol"].to_numpy(dtype=float)
+        T = df["T_years"].to_numpy(dtype=float)
+        K = df["strike"].to_numpy(dtype=float)
+        valid = (sigma > 0) & (T > 0) & np.isfinite(sigma) & np.isfinite(T)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            d1 = np.where(valid, (np.log(S / K) + (r - q + 0.5 * sigma**2) * T) / (sigma * np.sqrt(T)), np.nan)
+            d2 = np.where(valid, d1 - sigma * np.sqrt(T), np.nan)
+        if option_type == "call":
+            df["prob_win"] = np.where(valid, _norm_cdf(-d2), np.nan)
+            df["delta"] = np.where(valid, np.exp(-q * T) * _norm_cdf(d1), np.nan)
+        else:
+            df["prob_win"] = np.where(valid, _norm_cdf(d2), np.nan)
+            df["delta"] = np.where(valid, -np.exp(-q * T) * _norm_cdf(-d1), np.nan)
+    else:
+        df["prob_win"] = np.nan
+        df["delta"] = np.nan
+    df["bid_ask_spread"] = df["ask"] - df["bid"]
+    return df
+
+
+def compute_cc_metrics(df: pd.DataFrame, S: float, r: float = 0.0, q: float = 0.0) -> pd.DataFrame:
     """Compute covered-call metrics: yield is premium / spot price."""
     df = df[df["option_type"] == "call"].copy()
     df["premium"] = (df["bid"] + df["ask"]) / 2
@@ -208,10 +236,11 @@ def compute_cc_metrics(df: pd.DataFrame, S: float) -> pd.DataFrame:
     df["breakeven"] = S - df["premium"]
     df["dte"] = (pd.to_datetime(df["expiration"]) - pd.Timestamp.today()).dt.days
     df["annualized_yield"] = (df["premium"] / S) * (365 / df["dte"])
-    return df[df["strike"] >= S]
+    df = df[df["strike"] >= S]
+    return _add_bs_columns(df, S, r, q, "call")
 
 
-def compute_csp_metrics(df: pd.DataFrame, S: float) -> pd.DataFrame:
+def compute_csp_metrics(df: pd.DataFrame, S: float, r: float = 0.0, q: float = 0.0) -> pd.DataFrame:
     """Compute cash-secured put metrics: yield is premium / strike (cash at risk)."""
     df = df[df["option_type"] == "put"].copy()
     df["premium"] = (df["bid"] + df["ask"]) / 2
@@ -220,7 +249,8 @@ def compute_csp_metrics(df: pd.DataFrame, S: float) -> pd.DataFrame:
     df["breakeven"] = df["strike"] - df["premium"]
     df["dte"] = (pd.to_datetime(df["expiration"]) - pd.Timestamp.today()).dt.days
     df["annualized_yield"] = (df["premium"] / df["strike"]) * (365 / df["dte"])
-    return df[df["strike"] <= S]
+    df = df[df["strike"] <= S]
+    return _add_bs_columns(df, S, r, q, "put")
 
 
 def screen(symbol: str, strategy: str = "cc", top_n: int = 20):
@@ -251,13 +281,17 @@ def screen(symbol: str, strategy: str = "cc", top_n: int = 20):
     footnotes = [f"Fetched {len(df_chain)} option contracts."]
 
     compute_fn = compute_cc_metrics if strategy == "cc" else compute_csp_metrics
-    df_screened = compute_fn(df_chain, S)
+    df_screened = compute_fn(df_chain, S, r=r, q=q)
     footnotes.append(f"Computed {strategy_label.lower()} metrics for {len(df_screened)} contracts.")
 
     df_screened = df_screened[(df_screened["dte"] >= 7) & (df_screened["dte"] <= 60)]
     df_best = df_screened.sort_values("annualized_yield", ascending=False)
 
-    cols = ["expiration", "strike", "premium", "dte", "pct_otm", "breakeven", "annualized_yield"]
+    cols = [
+        "expiration", "strike", "premium", "dte", "pct_otm",
+        "breakeven", "annualized_yield", "prob_win", "delta", "bid_ask_spread",
+    ]
+    cols = [c for c in cols if c in df_best.columns]
     df_display = df_best[cols].head(top_n).copy()
     df_display = df_display.rename(
         columns={
@@ -268,6 +302,9 @@ def screen(symbol: str, strategy: str = "cc", top_n: int = 20):
             "pct_otm": "% OTM",
             "breakeven": "Breakeven",
             "annualized_yield": "Ann. Yield",
+            "prob_win": "P(Win)",
+            "delta": "Delta",
+            "bid_ask_spread": "Spread",
         }
     )
     table = df_display.to_string(
@@ -279,6 +316,9 @@ def screen(symbol: str, strategy: str = "cc", top_n: int = 20):
             "% OTM": lambda v: f"{v:.2f}%",
             "Breakeven": lambda v: f"${v:,.2f}",
             "Ann. Yield": lambda v: f"{v * 100:.2f}%",
+            "P(Win)": lambda v: f"{v * 100:.1f}%" if pd.notna(v) else "N/A",
+            "Delta": lambda v: f"{v:.3f}" if pd.notna(v) else "N/A",
+            "Spread": lambda v: f"${v:,.2f}",
         },
     )
     lines = table.splitlines()
