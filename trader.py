@@ -64,7 +64,7 @@ def get_spot_price(symbol: str) -> float:
     raise RuntimeError(f"Invalid price data for symbol: {symbol}")
 
 
-def get_dividend_yield(symbol: str) -> float:
+def get_dividend_yield(symbol: str, price: float | None = None) -> float:
     try:
         start_date = date.today() - timedelta(days=365)
         response = obb.equity.fundamental.dividends(
@@ -78,7 +78,8 @@ def get_dividend_yield(symbol: str) -> float:
             raise ValueError("No valid dividend amounts found")
 
         total_dividends = sum(amounts)
-        price = get_spot_price(symbol)
+        if price is None:
+            price = get_spot_price(symbol)
         return total_dividends / price if price else 0.0
     except Exception as exc:
         raise RuntimeError(
@@ -117,7 +118,7 @@ def get_risk_free_rate() -> float:
 
 def fetch_underlying_data(symbol: str) -> dict:
     S = get_spot_price(symbol)
-    q = get_dividend_yield(symbol)
+    q = get_dividend_yield(symbol, price=S)
     r = get_risk_free_rate()
     return {"symbol": symbol, "spot_price": S, "dividend_yield": q, "risk_free_rate": r}
 
