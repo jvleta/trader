@@ -199,38 +199,38 @@ def fetch_option_chain(
     return result.reset_index(drop=True)
 
 
-def compute_metrics(df: pd.DataFrame, S: float):
-    """Compute covered-call metrics for each contract."""
-    df = df.copy()
-
-    # Filter for calls only
-    df = df[df["option_type"] == "call"]
-
-    # Mid price = (bid + ask)/2
+def compute_cc_metrics(df: pd.DataFrame, S: float) -> pd.DataFrame:
+    """Compute covered-call metrics: yield is premium / spot price."""
+    df = df[df["option_type"] == "call"].copy()
     df["premium"] = (df["bid"] + df["ask"]) / 2
-
-    # Remove contracts with no liquidity
     df = df[df["premium"] > 0]
-
-    # % OTM
     df["pct_otm"] = (df["strike"] - S) / S * 100
-
-    # Breakeven point
     df["breakeven"] = S - df["premium"]
-
-    # Annualized yield from premium
     df["dte"] = (pd.to_datetime(df["expiration"]) - pd.Timestamp.today()).dt.days
     df["annualized_yield"] = (df["premium"] / S) * (365 / df["dte"])
-
-    df = df[df["strike"] >= S]
-
-    return df
+    return df[df["strike"] >= S]
 
 
-def screen(symbol: str, top_n: int = 20):
-    print(f"\n📈 COVERED CALL SCREEN FOR {symbol}\n")
+def compute_csp_metrics(df: pd.DataFrame, S: float) -> pd.DataFrame:
+    """Compute cash-secured put metrics: yield is premium / strike (cash at risk)."""
+    df = df[df["option_type"] == "put"].copy()
+    df["premium"] = (df["bid"] + df["ask"]) / 2
+    df = df[df["premium"] > 0]
+    df["pct_otm"] = (S - df["strike"]) / S * 100
+    df["breakeven"] = df["strike"] - df["premium"]
+    df["dte"] = (pd.to_datetime(df["expiration"]) - pd.Timestamp.today()).dt.days
+    df["annualized_yield"] = (df["premium"] / df["strike"]) * (365 / df["dte"])
+    return df[df["strike"] <= S]
 
-    # Underlying data
+
+def screen(symbol: str, strategy: str = "cc", top_n: int = 20):
+    strategy = strategy.lower()
+    if strategy not in ("cc", "csp"):
+        raise ValueError(f"Unknown strategy '{strategy}'. Use 'cc' or 'csp'.")
+
+    strategy_label = "COVERED CALL" if strategy == "cc" else "CASH SECURED PUT"
+    print(f"\n📈 {strategy_label} SCREEN FOR {symbol}\n")
+
     data = fetch_underlying_data(symbol)
     S, q, r = data["spot_price"], data["dividend_yield"], data["risk_free_rate"]
 
@@ -247,32 +247,17 @@ def screen(symbol: str, top_n: int = 20):
         print(f"{label:<{label_width}}  {value:>{value_width}}")
     print()
 
-    # Option chain
     df_chain = fetch_option_chain(symbol)
-    footnotes = []
-    footnotes.append(f"Fetched {len(df_chain)} option contracts.")
+    footnotes = [f"Fetched {len(df_chain)} option contracts."]
 
-    # Compute covered-call metrics
-    df_cc = compute_metrics(df_chain, S)
-    footnotes.append(f"Computed covered-call metrics for {len(df_cc)} contracts.")
+    compute_fn = compute_cc_metrics if strategy == "cc" else compute_csp_metrics
+    df_screened = compute_fn(df_chain, S)
+    footnotes.append(f"Computed {strategy_label.lower()} metrics for {len(df_screened)} contracts.")
 
-    # Restrict to reasonable expirations (7–60 DTE)
-    df_cc = df_cc[(df_cc["dte"] >= 7) & (df_cc["dte"] <= 60)]
+    df_screened = df_screened[(df_screened["dte"] >= 7) & (df_screened["dte"] <= 60)]
+    df_best = df_screened.sort_values("annualized_yield", ascending=False)
 
-    # Sort by annualized yield
-    df_best = df_cc.sort_values("annualized_yield", ascending=False)
-
-    # Display top choices in table
-    cols = [
-        "expiration",
-        "strike",
-        "premium",
-        "dte",
-        "pct_otm",
-        "breakeven",
-        "annualized_yield",
-    ]
-
+    cols = ["expiration", "strike", "premium", "dte", "pct_otm", "breakeven", "annualized_yield"]
     df_display = df_best[cols].head(top_n).copy()
     df_display = df_display.rename(
         columns={
@@ -308,8 +293,14 @@ def screen(symbol: str, top_n: int = 20):
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Screen covered-call candidates.")
+    parser = argparse.ArgumentParser(description="Screen covered-call or cash-secured put candidates.")
     parser.add_argument("symbol", help="Underlying stock symbol.")
+    parser.add_argument(
+        "--strategy",
+        choices=["cc", "csp"],
+        default="csp",
+        help="Screening strategy: 'cc' for covered calls, 'csp' for cash secured puts (default: cc).",
+    )
     parser.add_argument(
         "--top-n",
         type=int,
@@ -317,4 +308,4 @@ if __name__ == "__main__":
         help="Number of rows to show in the top candidate table (default: 20).",
     )
     args = parser.parse_args()
-    screen(args.symbol, top_n=args.top_n)
+    screen(args.symbol, strategy=args.strategy, top_n=args.top_n)
